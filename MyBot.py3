@@ -1,14 +1,17 @@
 #!/usr/bin/env python3
 from ants import *
 import random
+from collections import defaultdict
 
+DIRECTIONS = ['n','e','s','w']
 # define a class with a do_turn method
 # the Ants.run method will parse and update bot input
 # it will also run the do_turn method for us
 class MyBot:
     def __init__(self):
         # define class level variables, will be remembered between turns
-        pass
+        self.ants = None
+        self.world = defaultdict(lambda: None)
     
     # do_setup is run once at the start of the game
     # after the bot has received the game settings
@@ -23,26 +26,38 @@ class MyBot:
     def do_turn(self, ants):
         # loop through all my ants and try to give them orders
         # the ant_loc is an ant location tuple in (row, col) form
-        directions = ['n','e','s','w']
+        self.ants = ants
 
-        # TODO: Parallelize this loop. Should call a function ant_action()
         for ant_loc in ants.my_ants():
-            # try all directions in random order
-            random.shuffle(directions)
-
-            for direction in directions:
-                # the destination method will wrap around the map properly
-                # and give us a new (row, col) tuple
-                new_loc = ants.destination(ant_loc, direction)
-                # passable returns true if the location is land
-                if (ants.passable(new_loc)):
-                    # an order is the location of a current ant and a direction
-                    ants.issue_order((ant_loc, direction))
-                    # stop now, don't give 1 ant multiple orders
-                    break
+            self.ant_action(ant_loc)
 
             # check if we still have time left to calculate more orders
             if ants.time_remaining() < 10:
+                break
+
+    def ant_action(self, ant_loc):
+        """ Function for each ant movement """
+        # TODO: construct world map construction
+        # self._world_map(ant_loc)
+        
+        self._random_move(ant_loc)
+
+    def _move_away(self, ant_loc):
+        raise NotImplementedError
+
+    def _random_move(self, ant_loc):
+        random.shuffle(DIRECTIONS)
+
+        for direction in DIRECTIONS:
+            # the destination method will wrap around the map properly
+            # and give us a new (row, col) tuple
+            new_loc = self.ants.destination(ant_loc, direction)
+
+            if (self.ants.passable(new_loc) and self.ants.unoccupied(new_loc)):
+                # an order is the location of a current ant and a direction
+                self.ants.issue_order((ant_loc, direction))
+
+                # stop now, don't give 1 ant multiple orders
                 break
             
 if __name__ == '__main__':

@@ -9,7 +9,10 @@ from collections import defaultdict
 class Kerrigan(object):
     def __init__(self):
         # define class level variables, will be remembered between turns
-        self.lings = defaultdict(lambda: None) # stores instances of Ant class
+        self.swarm = defaultdict(lambda: None) # stores instances of Ant class
+        self.goals = set()
+        self.assigned_goals = set()
+        self.unassigned_goals = set()
     
     # do_setup is run once at the start of the game
     # after the bot has received the game settings
@@ -19,7 +22,7 @@ class Kerrigan(object):
         self.world = world
 
         for ling_loc in self.world.my_ants():
-            self.lings[ling_loc] = Ling(ling_loc)
+            self.swarm[ling_loc] = Drone(ling_loc)
     
     # do turn is run once per turn
     # the lings class has the game state and is updated by the Ants.run method
@@ -29,12 +32,14 @@ class Kerrigan(object):
         # the ling_loc is an ling location tuple in (row, col) form
         self.world = world
 
+        self.update_goals()
+
         for ling_loc in self.world.my_ants():
             # new ant is born
-            if self.lings[ling_loc] is None:
-                self.lings[ling_loc] = Ling(ling_loc)
+            if self.swarm[ling_loc] is None:
+                self.swarm[ling_loc] = Drone(ling_loc)
 
-            self.execute_move(self.lings[ling_loc])
+            self.execute_move(self.swarm[ling_loc])
 
             # check if we still have time left to calculate more orders
             if self.world.time_remaining() < 10:
@@ -48,16 +53,35 @@ class Kerrigan(object):
             new_loc, direction = move
             self.world.issue_order((ling.loc, direction))
             
-            self.lings[ling.loc] = None
-            self.lings[new_loc] = ling 
+            self.swarm[ling.loc] = None
+            self.swarm[new_loc] = ling 
             ling.loc = new_loc
     
     def suicide(self, loc):
         return (not self.world.passable(loc) or
                 not self.world.unoccupied(loc) or
-                self.lings[loc])
+                self.swarm[loc])
 
+    def get_goal(self, ling):
+        goal = min(self.unassigned_goals,
+            key = lambda goal: self.world.distance(ling.loc, goal))
+        self.unassigned_goals.remove(goal)
+        self.assigned_goals.add(goal)
 
+        return goal
+
+    def update_goals(self):
+        self.goals = set(self.world.food())
+        self.unassigned_goals = self.goals.difference(self.assigned_goals)
+
+    def moves_from(self, loc):
+        moves = [(self.world.destination(loc, direction), direction)
+                    for direction in DIRECTIONS]
+        moves = [(new_loc, direction) for new_loc, direction in moves 
+                    if self.world.passable(new_loc)]
+        return moves
+
+        
 DIRECTIONS = ['n','e','s','w']
 class Ling(object):
     """ Class to represent each 'ling """
@@ -75,11 +99,75 @@ class Ling(object):
                     if not overlord.suicide(new_loc)]
         return moves
         
-class Drone(object):
-    """ Class to represent resource gatherers. """
+class Drone(Ling):
+    """ Class to represent resource gatherers. Using shortest path for algorithm """
+    def __init__(self, loc):
+        self.loc = loc
+        self.goal = None
+
     def get_move(self, overlord):
-        """ Performs a random move. """
-        pass
+        """ Performs a breadth-first search to all food. """
+        if self.goal is None or self.goal not in overlord.goals:
+            self.goal = overlord.get_goal(self)
+            self.move_queue = self.a_star(overlord, not_dying_but_getting_closer)
+        valid_moves = self.valid_moves(overlord) 
+        if move_queue[0] in valid_moves
+            return move_queue.pop()
+        else:
+            self.move_queue = self.a_star(overlord, not_dying_but_getting_closer)
+            return move_queue.pop() 
+             
+    @staticmethod
+    def not_dying_but_getting_closer(world, loc1, loc2):
+        return world.distance(loc1, loc2)
+
+    def a_star(self,overlord,heuristic):
+        world = overlord.world
+        closedset = set()
+        openset = set(self.loc)
+        came_from = {} 
+
+        g_score = {self.loc : 0}
+        h_score = {self.loc : heuristic(world, self.loc, self.goal)}
+        f_score = {self.loc : g_score[self.loc] + h_score[self.loc]}
+
+        while openset:
+            move = min(openset, key=lambda loc: f_score[loc])
+            if move == self.goal:
+                return reconstruct_path(came_from, came_from[self.goal]) 
+                
+            openset.remove(move)
+            closedset.add(move)
+            for neighbor in overlord.moves_from(move):
+                if neighbor in closedset:
+                    continue
+                tentative_g_score = g_score[move] + 1 
+
+                if neighbor not in openset:
+                    openset.add(neighbor)
+                    tentative_is_better = True
+                elif tentative_g_score < g_score[neighbor]:
+                    tentative_is_better = True
+                else:
+                    tentative_is_better = False
+                
+                if tentative_is_better: 
+                    came_from[neighbor] = move
+                    g_score[neighbor] = tentative_g_score
+                    h_score[neighbor] = heuristic(world, neighbor, self.goal)
+                    f_score[neighbor] = g_score[neighbor] + h_score[neighbor]
+
+        return None
+
+    @staticmethod
+    def reconstruct_path(came_from, loc):
+        if came_from[loc]:
+            p = reconstruct_path(came_from, came_from[loc])
+            p.append(loc)
+            return p
+        else:
+            return [loc]
+
 
 class Baneling(Ling):
     """ Ling that looks for things to attack and then swarms them.  """
@@ -101,3 +189,5 @@ if __name__ == '__main__':
         Ants.run(Kerrigan())
     except KeyboardInterrupt:
         print('ctrl-c, leaving ...')
+
+

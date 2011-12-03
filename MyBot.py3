@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 from ants import *
+import random
 
 # define a class with a do_turn method
 # the Ants.run method will parse and update bot input
@@ -22,9 +23,13 @@ class MyBot:
     def do_turn(self, ants):
         # loop through all my ants and try to give them orders
         # the ant_loc is an ant location tuple in (row, col) form
+        directions = ['n','e','s','w']
+
+        # TODO: Parallelize this loop. Should call a function ant_action()
         for ant_loc in ants.my_ants():
-            # try all directions in given order
-            directions = ('n','e','s','w')
+            # try all directions in random order
+            random.shuffle(directions)
+
             for direction in directions:
                 # the destination method will wrap around the map properly
                 # and give us a new (row, col) tuple
@@ -35,6 +40,7 @@ class MyBot:
                     ants.issue_order((ant_loc, direction))
                     # stop now, don't give 1 ant multiple orders
                     break
+
             # check if we still have time left to calculate more orders
             if ants.time_remaining() < 10:
                 break

@@ -38,9 +38,17 @@ class MyBot:
     def ant_action(self, ant_loc):
         """ Function for each ant movement """
         # TODO: construct world map construction
-        # self._world_map(ant_loc)
+        self._world_map(ant_loc)
         
         self._random_move(ant_loc)
+
+    def _world_map(self, ant_loc):
+        """ Build up research. """
+        for direction in DIRECTIONS:
+            loc = self.ants.destination(ant_loc, direction)
+
+            if self.ants.passable(loc) and self.ants.unoccupied(loc):
+                self.world[loc] = True
 
     def _move_away(self, ant_loc):
         raise NotImplementedError
@@ -53,8 +61,11 @@ class MyBot:
             # and give us a new (row, col) tuple
             new_loc = self.ants.destination(ant_loc, direction)
 
-            if (self.ants.passable(new_loc) and self.ants.unoccupied(new_loc)):
+            if (self.ants.passable(new_loc) and self.ants.unoccupied(new_loc)
+                and self.world[new_loc]):
                 # an order is the location of a current ant and a direction
+                self.world[ant_loc] = True
+                self.world[new_loc] = False
                 self.ants.issue_order((ant_loc, direction))
 
                 # stop now, don't give 1 ant multiple orders

@@ -61,8 +61,7 @@ class MyBot:
             # and give us a new (row, col) tuple
             new_loc = self.ants.destination(ant_loc, direction)
 
-            if (self.ants.passable(new_loc) and self.ants.unoccupied(new_loc)
-                and self.world[new_loc]):
+            if not suicide(new_loc):
                 # an order is the location of a current ant and a direction
                 self.world[ant_loc] = True
                 self.world[new_loc] = False
@@ -70,6 +69,11 @@ class MyBot:
 
                 # stop now, don't give 1 ant multiple orders
                 break
+
+    def suicide(self, loc):
+        return self.ants.passable(new_loc) and 
+               self.ants.unoccupied(new_loc) and 
+               self.world[new_loc]
             
 if __name__ == '__main__':
     # psyco will speed up python a little, but is not needed

@@ -61,7 +61,7 @@ class MyBot:
             # and give us a new (row, col) tuple
             new_loc = self.ants.destination(ant_loc, direction)
 
-            if not suicide(new_loc):
+            if not self.suicide(new_loc):
                 # an order is the location of a current ant and a direction
                 self.world[ant_loc] = True
                 self.world[new_loc] = False

@@ -66,17 +66,20 @@ class Ling(object):
     
     def get_move(self, overlord):
         """ Performs a random move. """
-        random.shuffle(DIRECTIONS)
+        return random.choice(self.valid_moves(overlord))
 
-        for direction in DIRECTIONS:
-            # the destination method will wrap around the map properly
-            # and give us a new (row, col) tuple
-            new_loc = overlord.world.destination(self.loc, direction)
-
-            if not overlord.suicide(new_loc):
-                # an order is the location of a current ling and a direction
-                return (new_loc, direction) 
+    def valid_moves(self, overlord):
+        moves = [(overlord.world.destination(self.loc, direction), direction)
+                    for direction in DIRECTIONS]
+        moves = [(new_loc, direction) for new_loc, direction in moves 
+                    if not overlord.suicide(new_loc)]
+        return moves
         
+class Drone(object):
+    """ Class to represent resource gatherers. """
+    def get_move(self, overlord):
+        """ Performs a random move. """
+        pass
 
 class Baneling(Ling):
     """ Ling that looks for things to attack and then swarms them.  """

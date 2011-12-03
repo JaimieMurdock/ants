@@ -71,9 +71,9 @@ class MyBot:
                 break
 
     def suicide(self, loc):
-        return self.ants.passable(new_loc) and 
-               self.ants.unoccupied(new_loc) and 
-               self.world[new_loc]
+        return self.ants.passable(loc) and 
+               self.ants.unoccupied(loc) and 
+               self.world[loc]
             
 if __name__ == '__main__':
     # psyco will speed up python a little, but is not needed

@@ -81,7 +81,52 @@ class Kerrigan(object):
                     if self.world.passable(new_loc)]
         return moves
 
-        
+    def a_star(self, start, end, heuristic):
+        closedset = set()
+        openset = set().add(start)
+        came_from = {} 
+
+        g_score = {start : 0}
+        h_score = {start : heuristic(self, start, end)}
+        f_score = {start : g_score[start] + h_score[start]}
+
+        while openset:
+            move = min(openset, key=lambda loc: f_score[loc])
+            if move == end:
+                return reconstruct_path(came_from, came_from[end]) 
+                
+            openset.remove(move)
+            closedset.add(move)
+            for neighbor in self.moves_from(move):
+                if neighbor in closedset:
+                    continue
+                tentative_g_score = g_score[move] + 1 
+
+                if neighbor not in openset:
+                    openset.add(neighbor)
+                    tentative_is_better = True
+                elif tentative_g_score < g_score[neighbor]:
+                    tentative_is_better = True
+                else:
+                    tentative_is_better = False
+                
+                if tentative_is_better: 
+                    came_from[neighbor] = move
+                    g_score[neighbor] = tentative_g_score
+                    h_score[neighbor] = heuristic(self, neighbor, end)
+                    f_score[neighbor] = g_score[neighbor] + h_score[neighbor]
+
+        return None 
+
+    @staticmethod
+    def reconstruct_path(came_from, loc):
+        if came_from[loc]:
+            p = reconstruct_path(came_from, came_from[loc])
+            p.append(loc)
+            return p
+        else:
+            return [loc]
+
 DIRECTIONS = ['n','e','s','w']
 class Ling(object):
     """ Class to represent each 'ling """
@@ -98,76 +143,30 @@ class Ling(object):
         moves = [(new_loc, direction) for new_loc, direction in moves 
                     if not overlord.suicide(new_loc)]
         return moves
+            
+    @staticmethod
+    def not_dying_but_getting_closer(overlord, start, next):
+        return overlord.world.distance(start, next)
         
 class Drone(Ling):
     """ Class to represent resource gatherers. Using shortest path for algorithm """
     def __init__(self, loc):
         self.loc = loc
         self.goal = None
+        self.move_queue = []
 
     def get_move(self, overlord):
         """ Performs a breadth-first search to all food. """
         if self.goal is None or self.goal not in overlord.goals:
             self.goal = overlord.get_goal(self)
-            self.move_queue = self.a_star(overlord, not_dying_but_getting_closer)
+            self.move_queue = self.a_star(overlord, Ling.not_dying_but_getting_closer)
+
         valid_moves = self.valid_moves(overlord) 
-        if move_queue[0] in valid_moves
-            return move_queue.pop()
+        if self.move_queue[0] in valid_moves:
+            return self.move_queue.pop()
         else:
-            self.move_queue = self.a_star(overlord, not_dying_but_getting_closer)
-            return move_queue.pop() 
-             
-    @staticmethod
-    def not_dying_but_getting_closer(world, loc1, loc2):
-        return world.distance(loc1, loc2)
-
-    def a_star(self,overlord,heuristic):
-        world = overlord.world
-        closedset = set()
-        openset = set(self.loc)
-        came_from = {} 
-
-        g_score = {self.loc : 0}
-        h_score = {self.loc : heuristic(world, self.loc, self.goal)}
-        f_score = {self.loc : g_score[self.loc] + h_score[self.loc]}
-
-        while openset:
-            move = min(openset, key=lambda loc: f_score[loc])
-            if move == self.goal:
-                return reconstruct_path(came_from, came_from[self.goal]) 
-                
-            openset.remove(move)
-            closedset.add(move)
-            for neighbor in overlord.moves_from(move):
-                if neighbor in closedset:
-                    continue
-                tentative_g_score = g_score[move] + 1 
-
-                if neighbor not in openset:
-                    openset.add(neighbor)
-                    tentative_is_better = True
-                elif tentative_g_score < g_score[neighbor]:
-                    tentative_is_better = True
-                else:
-                    tentative_is_better = False
-                
-                if tentative_is_better: 
-                    came_from[neighbor] = move
-                    g_score[neighbor] = tentative_g_score
-                    h_score[neighbor] = heuristic(world, neighbor, self.goal)
-                    f_score[neighbor] = g_score[neighbor] + h_score[neighbor]
-
-        return None
-
-    @staticmethod
-    def reconstruct_path(came_from, loc):
-        if came_from[loc]:
-            p = reconstruct_path(came_from, came_from[loc])
-            p.append(loc)
-            return p
-        else:
-            return [loc]
-
+            self.move_queue = self.a_star(overlord, Ling.not_dying_but_getting_closer)
+            return self.move_queue.pop() 
 
 class Baneling(Ling):
     """ Ling that looks for things to attack and then swarms them.  """
